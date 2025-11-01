@@ -1,5 +1,5 @@
 @tool
-@icon("res://addons/MusicMeta/icon.svg")
+@icon("res://addons/MusicMetadata/icon.svg")
 extends EditorPlugin
 
-##This script is intentionally left blank
+## This script is intentionally left blank

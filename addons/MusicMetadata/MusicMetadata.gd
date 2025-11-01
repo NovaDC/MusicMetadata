@@ -1,7 +1,7 @@
 @tool
-@icon("res://addons/MusicMeta/icon.svg")
-extends Resource
+@icon("res://addons/MusicMetadata/icon.svg")
 class_name MusicMetadata
+extends Resource
 
 ## Parses and contains common music file metadata.
 ##
@@ -14,8 +14,8 @@ class_name MusicMetadata
 ## Seconds per minute, used for internal calculations.
 const SEC_PER_MIN = 60
 
-## Maps the series of preset ID3 genere's to their readable genere name
-const ID3_GENERE_IDS:Dictionary = {
+## Maps the series of preset ID3 genre's to their readable genre name
+const ID3_GENRE_IDS:Dictionary = {
 	'0' : "Blues",
 	'1' : "Classic Rock",
 	'2' : "Country",
@@ -233,12 +233,9 @@ const ID3_FRAME_ID_TO_URL_NAME:Dictionary = {
 	'WXX' : "UserDefined"
 }
 
-## Used during parsing as the preferred newline to use when parsing requires a newline to be inserted.
-var preferred_newline = "\n".to_ascii_buffer()[0]
-
 ## The track's [i]Beats Per Minute[/i].
 @export var bpm: int = 0
-## The track's [i]Beats Per Second[/i]. Uses [member bpm] as a backing varible.
+## The track's [i]Beats Per Second[/i]. Uses [member bpm] as a backing variable.
 @export var bps:int:
 	get:
 		return bpm * SEC_PER_MIN
@@ -256,8 +253,8 @@ var preferred_newline = "\n".to_ascii_buffer()[0]
 @export var album_artist: String = ""
 ## The track's [i]Cover Image[/i].
 @export var cover: ImageTexture = null
-## The track's [i]Genere[/i].
-@export var genere:String = ""
+## The track's [i]genre[/i].
+@export var genre:String = ""
 ## The track's [i]Year[/i].
 @export var year: int = 0
 ## The track's [i]Date[/i].
@@ -274,18 +271,28 @@ var preferred_newline = "\n".to_ascii_buffer()[0]
 ## The track's [i]Terms Of Use[/i].
 @export var terms_of_use:String = ""
 
+## Used during parsing as the preferred newline to use when parsing
+## requires a newline to be inserted.
+var preferred_newline = "\n".to_ascii_buffer()[0]
+
+# ## This is intended to be private.
+# ## The hash of a USC string declaration. Used for comparison.
+var _usc_string_declairation_hash:int = [1, 0xff, 0xfe].hash()
+
 ## Create a [MusicMetadata] [Resource].
 ## If not [code] null [/code], [param source] will update the new [MusicMetadata] [Resource]
 ## with any appropriate data found.
 func _init(source:Variant = null):
 	if source != null:
-		if source is Array:
+		if source is Array or source is PackedInt32Array or source is PackedInt64Array:
 			source = PackedByteArray(source)
 
 		if source is PackedByteArray:
 			set_from_data(source)
 		elif source is AudioStream:
 			set_from_stream(source)
+		else:
+			assert(false, "unrecognised soruce")
 
 ## Updates the metadata object's values based off of the data found in [param stream].
 ## Only works with [AudioStreamMP3], [AudioStreamOggVorbis], and [AudioStreamWAV] streams.
@@ -293,30 +300,32 @@ func _init(source:Variant = null):
 ## for information regarding parsing [AudioStreamWAV] stream's metadata.
 func set_from_stream(stream:AudioStream):
 	if stream is AudioStreamMP3:
-		set_from_MP3_stream(stream)
+		set_from_mp3_stream(stream)
 	elif stream is AudioStreamOggVorbis:
 		set_from_oggvorbis_stream(stream)
 	elif stream is AudioStreamWAV:
 		set_from_wav_stream(stream)
 	else:
-		assert(false, "Stream type not supported")
+		assert(false, "Stream type not supported. Use raw bytes when available.")
 
 ## Updates the metadata object's values from the data found in the [AudioStreamMP3] [param stream].
-func set_from_MP3_stream(stream:AudioStreamMP3):
+func set_from_mp3_stream(stream:AudioStreamMP3):
 	assert(stream != null and stream.data != null, "Stream must contain data")
 	set_from_data(stream.data)
 
-## Updates the metadata object's values from the data found in the [AudioStreamOggVorbis] [param stream].
+## Updates the metadata object's values from the data found in the
+## [AudioStreamOggVorbis] [param stream].
 func set_from_oggvorbis_stream(stream:AudioStreamOggVorbis):
 	assert(stream != null and stream.data != null, "Stream must contain data")
 	set_from_data(stream.data)
 
-## Updates the metadata object's values based from data found in the [AudioStreamWAV] [param stream].
+## Updates the metadata object's values based from data found in the
+## [AudioStreamWAV] [param stream].
 ## NOTE: Due to the way Godot handles WAV streams, it is likely the data contained within a
 ## [AudioStreamWAV] object will have its metadata stripped form it.
 ## because of this, it is strongly suggested to instead pars the raw data form the file itself using
-## [method MusicMetadata.set_from_data] instead, unless you are sure that the metadata required will not
-## be stripped by Godot.
+## [method MusicMetadata.set_from_data] instead, unless you are sure that
+## the metadata required will not be stripped by Godot.
 func set_from_wav_stream(stream:AudioStreamWAV):
 	assert(stream != null and stream.data != null, "Stream must contain data")
 	set_from_data(stream.data)
@@ -326,40 +335,41 @@ func set_from_data(data:PackedByteArray):
 	if data.size() < 10:
 		push_error("Error: Stream data is too small. ")
 		return null
-	
+
 	var header = data.slice(0, 10)
 	var id3_id = header.slice(0, 3).get_string_from_ascii()
 	if id3_id == "ID3":
 		var v = "ID3v2.%d.%d" % [header[3], header[4]]
-		set_from_ID3_data(data, v)
+		set_from_id3_data(data, v)
 
-## Updates the metadata object's values from the ID3 data found in the [PackedByteArray] [param data].
+## Updates the metadata object's values from the ID3 data found in the
+## [PackedByteArray] [param data].
 ## The specific version of ID3 data must also be specified in [param ver].
-func set_from_ID3_data(data: PackedByteArray, ver:String):
+func set_from_id3_data(data: PackedByteArray, ver:String):
 	var header = data.slice(0, 10)
-	var null_as_seperator:bool = (ver == "ID3v2.4.0" or ver == "ID3v2.3.0")
+	var null_as_separator:bool = (ver == "ID3v2.4.0" or ver == "ID3v2.3.0")
 	var flags:int = header[5]
-	var _unsync:bool = flags & 0x80 > 0
+	var unsync:bool = flags & 0x80 > 0
 	var extended:bool = flags & 0x40 > 0
-	var _experimental:bool = flags & 0x20 > 0
-	var _has_footer:bool = flags & 0x10 > 0
+	var experimental:bool = flags & 0x20 > 0
+	var has_footer:bool = flags & 0x10 > 0
 	var idx:int = 10
 	var end:int = idx + _bytes_to_int(header.slice(6, 10))
 	if extended:
 		idx += _bytes_to_int(data.slice(idx, idx + 4))
-		
+
 	while idx < end:
 		var frame_id = data.slice(idx, idx + 4).get_string_from_ascii()
 		var size = _bytes_to_int(data.slice(idx + 4, idx + 8), frame_id != "APIC")
-		
+
 		# if greater than byte, not sync safe number (0b0111_1111 -> 0x7f)
 		if size > 0x7f:
 			size = _bytes_to_int(data.slice(idx + 4, idx + 8), false)
 		idx += 10
-		
+
 		var frame_data = data.slice(idx, idx+size)
 		if frame_data.size() > 0:
-			set_value_from_ID3_frame(frame_id, frame_data, null_as_seperator)
+			set_value_from_id3_frame(frame_id, frame_data, null_as_separator)
 
 		idx += size
 
@@ -380,70 +390,73 @@ func print_info():
 ## When true, a [code] null [/code] value will be treated as a newline,
 ## instead of terminating the data, if its to be read as a string.
 ## Used internally when a ID3 frame is found when parsing binary data.
-func set_value_from_ID3_frame(frame_name:String, sliced_frame_data:PackedByteArray, null_as_sep:bool = false):
+func set_value_from_id3_frame(frame_name:String,
+								sliced_frame_data:PackedByteArray,
+								null_as_sep:bool = false
+								):
 	if sliced_frame_data.size() <= 0:
 		assert(false, "bad data provided")
 		return
-	
+
 	match frame_name:
 		"TBPM", 'TBP':
-			bpm = int(_get_string_from_ID3data(sliced_frame_data))
+			bpm = int(_get_string_from_id3_data(sliced_frame_data))
 		"TIT2", 'TT2':
-			title = _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			title = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"TALB", 'TAL':
-			album = _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			album = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"COMM", "COM":
-			comments = _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			comments = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"TXX", "TXXX":
-			user_defined_text += _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			user_defined_text += _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"TCOP", "TCR":
-			copyright += _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			copyright += _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"TDAT", "TDA":
-			date = _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			date = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"TYER", "TYE":
-			year = int(_get_string_from_ID3data(sliced_frame_data))
+			year = int(_get_string_from_id3_data(sliced_frame_data))
 		"TPE1", 'TP1':
-			artist = _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			artist = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"TPE2", 'TP2':
-			album_artist = _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			album_artist = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"TRCK", 'TRK':
-			track_no = int(_get_string_from_ID3data(sliced_frame_data))
+			track_no = int(_get_string_from_id3_data(sliced_frame_data))
 		"USER":
-			terms_of_use = _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			terms_of_use = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 		"TCON", 'TCO':
-			var gen_key = _get_string_from_ID3data(sliced_frame_data, null_as_sep)
+			var gen_key = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
 			gen_key = gen_key.strip_escapes().strip_edges()
 			while gen_key[0] == "(" and gen_key[-1] == ")":
 				gen_key = gen_key.substr(1,gen_key.length()-2)
 			if gen_key.is_valid_int():
 				gen_key = str(int(gen_key))
-			if gen_key in ID3_GENERE_IDS:
-				genere = ID3_GENERE_IDS[gen_key]
+			if gen_key in ID3_GENRE_IDS:
+				genre = ID3_GENRE_IDS[gen_key]
 			else:
-				genere = gen_key
+				genre = gen_key
 		"APIC", 'PIC':
 			sliced_frame_data = sliced_frame_data.slice(1)
 			var zero1 = sliced_frame_data.find(0)
-			
+
 			if zero1 <= 0:
 				assert(false, "bad cover photo")
 				return
-			
+
 			var mime_type = sliced_frame_data.slice(0, zero1).get_string_from_ascii()
-			
+
 			zero1 += 1 # Picture type
 			if zero1 >= sliced_frame_data.size():
 				assert(false, "bad cover photo")
 				return
-				
+
 			zero1 += 1
 			if zero1 >= sliced_frame_data.size():
 				assert(false, "bad cover photo")
 				return
-				
+
 			var zero2 = sliced_frame_data.find(0, zero1)
 			var image_bytes = sliced_frame_data.slice(zero2 + 1)
-			
+
 			var img = Image.new()
 			match mime_type:
 				"image/png":
@@ -455,31 +468,28 @@ func set_value_from_ID3_frame(frame_name:String, sliced_frame_data:PackedByteArr
 					return
 			cover = ImageTexture.create_from_image(img)
 		var fr_id when fr_id in ID3_FRAME_ID_TO_URL_NAME.keys():
-			urls[ID3_FRAME_ID_TO_URL_NAME[fr_id]] = _get_string_from_ID3data(sliced_frame_data)
+			urls[ID3_FRAME_ID_TO_URL_NAME[fr_id]] = _get_string_from_id3_data(sliced_frame_data)
 
-# ## This is intended to be private.
-# ## The hash of a USC string declaration. Used for compairson.
-var _USC_STRING_DECLARATION_HASH:int = [1, 0xff, 0xfe].hash()
 # ## This method is intended to be private.
-# ## Gets a string from the given ID3 formated [param data]. Accounts for USC formated strings.
-func _get_string_from_ID3data(data, null_to_newline:bool = false) -> String:
+# ## Gets a string from the given ID3 formatted [param data]. Accounts for USC formatted strings.
+func _get_string_from_id3_data(data, null_to_newline:bool = false) -> String:
 	var ret = ""
-	
-	if data.size() > 3 and Array(data.slice(0, 3)).hash() == _USC_STRING_DECLARATION_HASH:
+
+	if data.size() > 3 and Array(data.slice(0, 3)).hash() == _usc_string_declairation_hash:
 		# Null-terminated string of ucs2 chars
 		ret = _get_string_from_ucs2(data.slice(3), null_to_newline)
-	
+
 	if ret == "" and data[0] == 0:
 		# Simple utf8 string
 		if null_to_newline:
 			data = _byte_array_replace(data, 0, preferred_newline)
 		ret = data.slice(1).get_string_from_utf8()
-	
+
 	return ret
 
 # ## This method is intended to be private.
-# ## Gets a [String] from a USC formated [Array] of bytes.
-# ## Assumes that the given [param bytes] are USC formated (does not check).
+# ## Gets a [String] from a USC formatted [Array] of bytes.
+# ## Assumes that the given [param bytes] are USC formatted (does not check).
 func _get_string_from_ucs2(bytes: Array, null_to_newline:bool = false) -> String:
 	var s:String = ""
 	var idx:int = 0
@@ -504,7 +514,7 @@ func _byte_array_replace(byte_array:PackedByteArray, this:int, with:int) -> Pack
 
 # ## This method is intended to be private.
 # ## Converts a given [Array] of [param bytes] into a [int],
-# ## also accounting for a syncsafe formated int when [param is_syncsafe] is set.
+# ## also accounting for a syncsafe formatted int when [param is_syncsafe] is set.
 func _bytes_to_int(bytes: Array, is_syncsafe = true) -> int:
 	# Syncsafe uses 0x80 multiplier otherwise use 0x100 multiplier
 	var mult:int = 0x80 if is_syncsafe else 0x100
