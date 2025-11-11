@@ -5,521 +5,369 @@ extends Resource
 
 ## Parses and contains common music file metadata.
 ##
-## This class contains common metadata parsed from music files, with the ability to parse
-## (currently only ID3 formatted) metadata from files. The user may also use this as a means to
+## This class contains common metadata tags parsed from music files, with the ability to parse
+## some formats of metadata from these files. The user may also use this as a means to
 ## store manually defined metadata about music tracks, as the data contained is not automatically
 ## linked to any changes made after the parsing of a file.
-## See [code] MusicMetadataUIBehave [/code] for a UI implementation example (or use it directly).
+## See [code] MusicMetadataUIBehave [/code] for a UI implementation example
+## (or use it directly).[br][br]
+## Tags defined in a [MusicMetadata] instance will also be available as a named property,
+## providing that they are an acceptable property name for a GDScript class
+## (though still always being available thorough other relevant methods).
+## Since all explicitly exported properties (besides the [member tags] property)
+## are backed by the same content in the [member tags] [Dictionary],
+## the states of these exported properties will always match those in the [member tags dictionary],
+## as well as the states retrieved from or modified by the various methods related to tags.
+## Any metadata tag with the reserved name of "tags"
+## or "_property_name_cache" will always be remapped to a tag with the name plus a
+## "_" character appended to the end.
+## For example, since "tags" is a reserved tag name,
+## "tags" and "tags_" will always refer to the same metadata.
 
 ## Seconds per minute, used for internal calculations.
 const SEC_PER_MIN = 60
 
-## Maps the series of preset ID3 genre's to their readable genre name
-const ID3_GENRE_IDS:Dictionary = {
-	'0' : "Blues",
-	'1' : "Classic Rock",
-	'2' : "Country",
-	'3' : "Dance",
-	'4' : "Disco",
-	'5' : "Funk",
-	'6' : "Grunge",
-	'7' : "Hip-Hop",
-	'8' : "Jazz",
-	'9' : 'Metal',
-	'10' : "New Age",
-	'11' : "Oldies",
-	'12' : "Other",
-	'13' : "Pop",
-	'14' : "R&B",
-	'15' : "Rap",
-	'16' : "Reggae",
-	'17' : "Rock",
-	'18' : "Techno",
-	'19': "Industrial",
-	'20' : "Alternative",
-	'21' : "Ska",
-	'22' : "Death Metal",
-	'23' : "Pranks",
-	'24' : "Soundtrack",
-	'25' : "Euro-Techno",
-	'26' : "Ambient",
-	'27' : "Trip-Hop",
-	'28' : "Vocal",
-	'29' : "Jazz+Funk",
-	'30' : "Fusion",
-	'31' : "Trance",
-	'32' : "Classical",
-	'33' : "Instrumental",
-	'34' : "Acid",
-	'35' : "House",
-	'36' : "Game",
-	'37' : "Sound Clip",
-	'38' : "Gospel",
-	'39' : "Noise",
-	'40' : "Alt. Rock",
-	'41' : "Bass",
-	'42' : "Soul",
-	'43' : "Punk",
-	'44' : "Space",
-	'45' : "Meditative",
-	'46' : "Instrumental Pop",
-	'47' : "Instrumental Rock",
-	'48' : "Ethnic",
-	'49' : "Gothic",
-	'50' : "Darkwave",
-	'51' : "Techno-Industrial",
-	'52' : "Electronic",
-	'53' : "Pop-Folk",
-	'54' : "Eurodance",
-	'55' : "Dream",
-	'56' : "Southern Rock",
-	'57' : "Comedy",
-	'58' : "Cult",
-	'59' : "Gangsta Rap",
-	'60' : "Top 40",
-	'61' : "Christian Rap",
-	'62' : "Pop/Funk",
-	'63' : "Jungle",
-	'64' : "Native American",
-	'65' : "Cabaret",
-	'66' : "New Wave",
-	'67' : "Psychedelic",
-	'68' : "Rave",
-	'69' : "Showtunes",
-	'70' : "Trailer",
-	'71' : "Lo-Fi",
-	'72' : "Tribal",
-	'73' : "Acid Punk",
-	'74' : "Acid Jazz",
-	'75' : "Polka",
-	'76' : "Retro",
-	'77' : 'Musical',
-	'78' : "Rock & Roll",
-	'79' : 'Hard Rock',
-	'80' : "Folk",
-	'81' : "Folk-Rock",
-	'82' : 'National Folk',
-	'83' : "Swing",
-	'84' : 'Fast-Fusion',
-	'85' : 'Bebop',
-	'86' : 'Latin',
-	'87' : 'Revival',
-	'88' : 'Celtic',
-	'89' : 'Bluegrass',
-	'90' : 'Avantgarde',
-	'91' : 'Gothic Rock',
-	'92' : 'Progressive Rock',
-	'93' : 'Psychedelic Rock',
-	'94' : 'Symphonic Rock',
-	'95' : 'Slow Rock',
-	'96' : 'Big Band',
-	'97' : 'Chorus',
-	'98' : 'Easy Listening',
-	'99' : 'Acoustic',
-	'100' : 'Humour',
-	'101' : 'Speech',
-	'102' : 'Chanson',
-	'103' : 'Opera',
-	'104' : 'Chamber Music',
-	'105' : 'Sonata',
-	'106' : 'Symphony',
-	'107' : 'Booty Bass',
-	'108' : 'Primus',
-	'109' : 'Porn Groove',
-	'110' : 'Satire',
-	'111' : 'Slow Jam',
-	'112' : 'Club',
-	'113' : 'Tango',
-	'114' : 'Samba',
-	'115' : 'Folklore',
-	'116' : 'Ballad',
-	'117' : 'Power Ballad',
-	'118' : 'Rhythmic Soul',
-	'119' : 'Freestyle',
-	'120' : 'Duet',
-	'121' : 'Punk Rock',
-	'122' : 'Drum Solo',
-	'123' : 'A Cappella',
-	'124' : 'Euro-House',
-	'125' : 'Dance Hall',
-	'126' : 'Goa',
-	'127' : 'Drum & Bass',
-	'128' : 'Club-House',
-	'129' : 'Hardcore',
-	'130' : 'Terror',
-	'131' : 'Indie',
-	'132' : 'BritPop',
-	'133' : 'Afro-Punk',
-	'134' : 'Polsk Punk',
-	'135' : 'Beat',
-	'136' : 'Christian Gangsta Rap',
-	'137' : 'Heavy Metal',
-	'138' : 'Black Metal',
-	'139' : 'Crossover',
-	'140' : 'Contemporary Christian',
-	'141' : 'Christian Rock',
-	'142' : 'Merengue',
-	'143' : 'Salsa',
-	'144' : 'Thrash Metal',
-	'145' : 'Anime',
-	'146' : 'JPop',
-	'147' : 'Synthpop',
-	'148' : 'Abstract',
-	'149' : 'Art Rock',
-	'150' : 'Baroque',
-	'151' : 'Bhangra',
-	'152' : 'Big Beat',
-	'153' : 'Breakbeat',
-	'154' : 'Chillout',
-	'155' : 'Downtempo',
-	'156' : 'Dub',
-	'157' : 'EBM',
-	'158' : 'Eclectic',
-	'159' : 'Electro',
-	'160' : 'Electroclash',
-	'161' : 'Emo',
-	'162' : 'Experimental',
-	'163' : 'Garage',
-	'164' : 'Global',
-	'165' : 'IDM',
-	'166' : 'Illbient',
-	'167' : 'Industro-Goth',
-	'168' : 'Jam Band',
-	'169' : 'Krautrock',
-	'170' : 'Leftfield',
-	'171' : 'Lounge',
-	'172' : 'Math Rock',
-	'173' : 'New Romantic',
-	'174' : 'Nu-Breakz',
-	'175' : 'Post-Punk',
-	'176' : 'Post-Rock',
-	'177' : 'Psytrance',
-	'178' : 'Shoegaze',
-	'179' : 'Space Rock',
-	'180' : 'Trop Rock',
-	'181' : 'World Music',
-	'182' : 'Neoclassical',
-	'183' : 'Audiobook',
-	'184' : 'Audio Theatre',
-	'185' : 'Neue Deutsche Welle',
-	'186' : 'Podcast',
-	'187' : 'Indie Rock',
-	'188' : 'G-Funk',
-	'189' : 'Dubstep',
-	'190' : 'Garage Rock',
-	'191' : 'Psybient',
-	'CR' : 'Cover',
-	'RX' : 'Remix'
-}
-
-## Maps Some ID3 frame names to their human readable names
-const ID3_FRAME_ID_TO_URL_NAME:Dictionary = {
-	"WCOM" : "Commercial",
-	'WCOP' : "Copyright",
-	'WFED' : "Podcast",
-	'WOAF' : "File",
-	'WOAR' : "Artist",
-	'WOAS' : "Source",
-	'WORS' : "InternetRadioStation",
-	'WPAY' : "Payment",
-	'WPUB' : "Publisher",
-	'WXXX' : "Custom",
-	'WAF' : "File",
-	'WAR' : "Artist",
-	'WAS' : "Source",
-	'WCM' : "Commercial",
-	'WCP' : "Copyright",
-	'WPB' : "Publisher",
-	'WXX' : "UserDefined"
-}
-
 ## The track's [i]Beats Per Minute[/i].
-@export var bpm: int = 0
-## The track's [i]Beats Per Second[/i]. Uses [member bpm] as a backing variable.
+@export var bpm:int = 0:
+	get:
+		return get_tag("bpm", 0)
+	set(_value):
+		set_tag("bpm", _value)
+## The track's [i]Beats Per second[/i].
 @export var bps:int:
 	get:
 		return bpm * SEC_PER_MIN
 	set(_value):
 		bpm = int(_value / SEC_PER_MIN)
 ## The track's [i]Title[/i].
-@export var title: String = ""
+@export var title:String:
+	get:
+		return get_tag("title", "")
+	set(_value):
+		set_tag("title", _value)
 ## The track's [i]Album Name[/i].
-@export var album: String = ""
+@export var album:String:
+	get:
+		return get_tag("album", "")
+	set(_value):
+		set_tag("album", _value)
 ## The track's [i]Number[/i].
-@export var track_no:int = -1
+@export var track_no:int = -1:
+	get:
+		return get_tag("track_no", -1)
+	set(_value):
+		set_tag("track_no", _value)
 ## The track's [i]Artist[/i].
-@export var artist: String = ""
-## The track's [i]Album's Artist[/i]. This is also known as the [i]Band Name[/i].
-@export var album_artist: String = ""
+@export var artist:String:
+	get:
+		return get_tag("artist", "")
+	set(_value):
+		set_tag("artist", _value)
+## The track's [i]Album's Artist[/i]. Sometimes known as the [i]Band Name[/i].
+@export var album_artist:String:
+	get:
+		return get_tag("album_artist", "")
+	set(_value):
+		set_tag("album_artist", _value)
 ## The track's [i]Cover Image[/i].
-@export var cover: ImageTexture = null
-## The track's [i]genre[/i].
-@export var genre:String = ""
+@export var cover:ImageTexture:
+	get:
+		return get_tag("cover", null)
+	set(_value):
+		set_tag("cover", _value)
+## The album's [i]Cover Image[/i].
+@export var album_cover:ImageTexture:
+	get:
+		return get_tag("album_cover", null)
+	set(_value):
+		set_tag("album_cover", _value)
+## The track's [i]Genre[/i].
+@export var genre:String:
+	get:
+		return get_tag("genre", "")
+	set(_value):
+		set_tag("genre", _value)
 ## The track's [i]Year[/i].
-@export var year: int = 0
+@export var year:int:
+	get:
+		return get_tag("year", 0)
+	set(_value):
+		set_tag("year", _value)
 ## The track's [i]Date[/i].
-@export var date:String = ""
-## The track's [i]Comments[/i].
-@export_multiline var comments: String = ""
-## The track's [i]User Defined Text[/i].
-@export_multiline var user_defined_text: String = ""
+@export var date:String:
+	get:
+		return get_tag("date", "")
+	set(_value):
+		set_tag("date", _value)
+## The track's [i]Comments[/i].[br]
+## Note that other text fields that arn't specifically
+## comments will instead be stored in the [member user_defined_texts].
+@export_multiline var comments:String:
+	get:
+		return get_tag("comments", "")
+	set(_value):
+		set_tag("comments", _value)
+## The track's [i]User Defined Text[/i] entries.
+## There may be multiple. The order of these will not typically matter,
+## unless a specific type of metadata specified otherwise.
+## This should only be used when the text in this feild cannot be applied as its own tag,
+## and should not apply to other common string based tags,
+## such as those in [member urls] or [member comments].
+@export_multiline var user_defined_texts:Array[String]:
+	get:
+		return Array(get_tag("user_defined_texts", []) , TYPE_STRING, "", null)
+	set(_value):
+		set_tag("user_defined_texts", _value)
 ## The track's [i]Urls[/i].
 ## It's keys are of [String]s with the type of url, it's values are of [String]s with the url.
-@export var urls:Dictionary = {}
+@export var urls:Dictionary:
+	get:
+		return get_tag("urls", {})
+	set(_value):
+		set_tag("urls", _value)
 ## The track's [i]Copyright Message[/i].
-@export var copyright:String = ""
+## This is a more general string of a copyright message,
+## not specifically corelating to any copyright date.
+@export var copyright:String:
+	get:
+		return get_tag("copyright", "")
+	set(_value):
+		set_tag("copyright", _value)
 ## The track's [i]Terms Of Use[/i].
-@export var terms_of_use:String = ""
+## This may also be contained in something like the copyright or other user defined texts,
+## but when its specifically labeled, independent of other forms of string messages,
+## a feild that corelates to the terms of use of a track should be specified here.
+@export var terms_of_use:String = "":
+	get:
+		return get_tag("terms_of_use", "")
+	set(_value):
+		set_tag("terms_of_use", _value)
 
-## Used during parsing as the preferred newline to use when parsing
-## requires a newline to be inserted.
-var preferred_newline = "\n".to_ascii_buffer()[0]
+# ## This property is intended to be private.
+# ## The backing variable used to store all metadata tags in a instance.
+# ## This is only exported the sake of serialization, not for inspector use.
+# ## Use the relevant [code]*_tag[/code] methods instead.
+@export var _tags := {}
 
-# ## This is intended to be private.
-# ## The hash of a USC string declaration. Used for comparison.
-var _usc_string_declairation_hash:int = [1, 0xff, 0xfe].hash()
+## A [b]read only copy[/b] of all tags stored internally in this class.
+## To modify this dictionary, the relevant [code]*_tag[/code] methods instead.
+## This property is not settable.
+var tags:Dictionary:
+	get:
+		var ret := _tags.duplicate()
+		ret.make_read_only()
+		return ret
 
-## Create a [MusicMetadata] [Resource].
-## If not [code] null [/code], [param source] will update the new [MusicMetadata] [Resource]
-## with any appropriate data found.
-func _init(source:Variant = null):
-	if source != null:
-		if source is Array or source is PackedInt32Array or source is PackedInt64Array:
-			source = PackedByteArray(source)
-
-		if source is PackedByteArray:
-			set_from_data(source)
-		elif source is AudioStream:
-			set_from_stream(source)
-		else:
-			assert(false, "unrecognised soruce")
-
-## Updates the metadata object's values based off of the data found in [param stream].
-## Only works with [AudioStreamMP3], [AudioStreamOggVorbis], and [AudioStreamWAV] streams.
-## See the [b]note[/b] in [method MusicMetadata.set_from_wav_stream]
-## for information regarding parsing [AudioStreamWAV] stream's metadata.
-func set_from_stream(stream:AudioStream):
-	if stream is AudioStreamMP3:
-		set_from_mp3_stream(stream)
-	elif stream is AudioStreamOggVorbis:
-		set_from_oggvorbis_stream(stream)
-	elif stream is AudioStreamWAV:
-		set_from_wav_stream(stream)
-	else:
-		assert(false, "Stream type not supported. Use raw bytes when available.")
-
-## Updates the metadata object's values from the data found in the [AudioStreamMP3] [param stream].
-func set_from_mp3_stream(stream:AudioStreamMP3):
-	assert(stream != null and stream.data != null, "Stream must contain data")
-	set_from_data(stream.data)
-
-## Updates the metadata object's values from the data found in the
-## [AudioStreamOggVorbis] [param stream].
-func set_from_oggvorbis_stream(stream:AudioStreamOggVorbis):
-	assert(stream != null and stream.data != null, "Stream must contain data")
-	set_from_data(stream.data)
-
-## Updates the metadata object's values based from data found in the
-## [AudioStreamWAV] [param stream].
-## NOTE: Due to the way Godot handles WAV streams, it is likely the data contained within a
-## [AudioStreamWAV] object will have its metadata stripped form it.
-## because of this, it is strongly suggested to instead pars the raw data form the file itself using
-## [method MusicMetadata.set_from_data] instead, unless you are sure that
-## the metadata required will not be stripped by Godot.
-func set_from_wav_stream(stream:AudioStreamWAV):
-	assert(stream != null and stream.data != null, "Stream must contain data")
-	set_from_data(stream.data)
-
-## Updates the metadata object's values based from data found in the [PackedByteArray] [param data].
-func set_from_data(data:PackedByteArray):
-	if data.size() < 10:
-		push_error("Error: Stream data is too small. ")
-		return null
-
-	var header = data.slice(0, 10)
-	var id3_id = header.slice(0, 3).get_string_from_ascii()
-	if id3_id == "ID3":
-		var v = "ID3v2.%d.%d" % [header[3], header[4]]
-		set_from_id3_data(data, v)
-
-## Updates the metadata object's values from the ID3 data found in the
-## [PackedByteArray] [param data].
-## The specific version of ID3 data must also be specified in [param ver].
-func set_from_id3_data(data: PackedByteArray, ver:String):
-	var header = data.slice(0, 10)
-	var null_as_separator:bool = (ver == "ID3v2.4.0" or ver == "ID3v2.3.0")
-	var flags:int = header[5]
-	var unsync:bool = flags & 0x80 > 0
-	var extended:bool = flags & 0x40 > 0
-	var experimental:bool = flags & 0x20 > 0
-	var has_footer:bool = flags & 0x10 > 0
-	var idx:int = 10
-	var end:int = idx + _bytes_to_int(header.slice(6, 10))
-	if extended:
-		idx += _bytes_to_int(data.slice(idx, idx + 4))
-
-	while idx < end:
-		var frame_id = data.slice(idx, idx + 4).get_string_from_ascii()
-		var size = _bytes_to_int(data.slice(idx + 4, idx + 8), frame_id != "APIC")
-
-		# if greater than byte, not sync safe number (0b0111_1111 -> 0x7f)
-		if size > 0x7f:
-			size = _bytes_to_int(data.slice(idx + 4, idx + 8), false)
-		idx += 10
-
-		var frame_data = data.slice(idx, idx+size)
-		if frame_data.size() > 0:
-			set_value_from_id3_frame(frame_id, frame_data, null_as_separator)
-
-		idx += size
-
-## Prints some of the metadata info to the output.
-func print_info():
-	print("bpm: ", bpm)
-	print("title: ", title)
-	print("album: ", album)
-	print("comments: ", comments)
-	print("year: ", year)
-	print("cover: ", cover)
-	print("artist: ", artist)
-
-## Updates a specific value from the given ID3 data frame's value.
-## [param frame_name] is the [String] name of the frame.
-## [param sliced_frame_data] in the specific binary data found in the ID3 frame.
-## [param null_as_sep] is an optional setting.
-## When true, a [code] null [/code] value will be treated as a newline,
-## instead of terminating the data, if its to be read as a string.
-## Used internally when a ID3 frame is found when parsing binary data.
-func set_value_from_id3_frame(frame_name:String,
-								sliced_frame_data:PackedByteArray,
-								null_as_sep:bool = false
-								):
-	if sliced_frame_data.size() <= 0:
-		assert(false, "bad data provided")
-		return
-
-	match frame_name:
-		"TBPM", 'TBP':
-			bpm = int(_get_string_from_id3_data(sliced_frame_data))
-		"TIT2", 'TT2':
-			title = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"TALB", 'TAL':
-			album = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"COMM", "COM":
-			comments = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"TXX", "TXXX":
-			user_defined_text += _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"TCOP", "TCR":
-			copyright += _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"TDAT", "TDA":
-			date = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"TYER", "TYE":
-			year = int(_get_string_from_id3_data(sliced_frame_data))
-		"TPE1", 'TP1':
-			artist = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"TPE2", 'TP2':
-			album_artist = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"TRCK", 'TRK':
-			track_no = int(_get_string_from_id3_data(sliced_frame_data))
-		"USER":
-			terms_of_use = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-		"TCON", 'TCO':
-			var gen_key = _get_string_from_id3_data(sliced_frame_data, null_as_sep)
-			gen_key = gen_key.strip_escapes().strip_edges()
-			while gen_key[0] == "(" and gen_key[-1] == ")":
-				gen_key = gen_key.substr(1,gen_key.length()-2)
-			if gen_key.is_valid_int():
-				gen_key = str(int(gen_key))
-			if gen_key in ID3_GENRE_IDS:
-				genre = ID3_GENRE_IDS[gen_key]
-			else:
-				genre = gen_key
-		"APIC", 'PIC':
-			sliced_frame_data = sliced_frame_data.slice(1)
-			var zero1 = sliced_frame_data.find(0)
-
-			if zero1 <= 0:
-				assert(false, "bad cover photo")
-				return
-
-			var mime_type = sliced_frame_data.slice(0, zero1).get_string_from_ascii()
-
-			zero1 += 1 # Picture type
-			if zero1 >= sliced_frame_data.size():
-				assert(false, "bad cover photo")
-				return
-
-			zero1 += 1
-			if zero1 >= sliced_frame_data.size():
-				assert(false, "bad cover photo")
-				return
-
-			var zero2 = sliced_frame_data.find(0, zero1)
-			var image_bytes = sliced_frame_data.slice(zero2 + 1)
-
-			var img = Image.new()
-			match mime_type:
-				"image/png":
-					img.load_png_from_buffer(image_bytes)
-				"image/jpeg", "image/jpg":
-					img.load_jpg_from_buffer(image_bytes)
-				_:
-					assert(false, "mime type %s not yet supported..." % [mime_type])
-					return
-			cover = ImageTexture.create_from_image(img)
-		var fr_id when fr_id in ID3_FRAME_ID_TO_URL_NAME.keys():
-			urls[ID3_FRAME_ID_TO_URL_NAME[fr_id]] = _get_string_from_id3_data(sliced_frame_data)
+# ## This property is intended to be private.
+# ## A cache used to store the specifically defined export names from this script,
+# ## when possible.
+# ## This is inly to be modified or used in the [method _get_property_list] override
+# ## defined later in this script.
+# ## Accidental modification of this variable will likely result
+# ## in recursion errors when retreving the property list of instances of this object.
+var _property_name_cache := PackedStringArray()
 
 # ## This method is intended to be private.
-# ## Gets a string from the given ID3 formatted [param data]. Accounts for USC formatted strings.
-func _get_string_from_id3_data(data, null_to_newline:bool = false) -> String:
-	var ret = ""
+# ## Takes a string and normalizes it into the from used for keys in the internal
+# ## [member _tags] [Dictionary].
+# ## This also handles the edge case of a metadata tag named itself "tags",
+# ## normalizing it to always avoid a name that would conflict with the property
+## of [member tags] defined on this object.
+func _normalize_tag_name(tag_name:String) -> String:
+	tag_name = tag_name.to_lower().strip_edges().replace_chars("- ", "_".unicode_at(0))
+	if tag_name in ["tags", "_property_name_cache"]:
+		tag_name += "_"
+	return tag_name
 
-	if data.size() > 3 and Array(data.slice(0, 3)).hash() == _usc_string_declairation_hash:
-		# Null-terminated string of ucs2 chars
-		ret = _get_string_from_ucs2(data.slice(3), null_to_newline)
+## Returns the associated metadata with the tag named [param tag_name], falling back to
+## [param default] if the tag is not defined.
+func get_tag(tag_name:String, default:Variant = null) -> Variant:
+	return _tags.get(_normalize_tag_name(tag_name), default)
 
-	if ret == "" and data[0] == 0:
-		# Simple utf8 string
-		if null_to_newline:
-			data = _byte_array_replace(data, 0, preferred_newline)
-		ret = data.slice(1).get_string_from_utf8()
+## Sets the associated metadata to the tag named [param tag_name] to the value
+## of [param value].
+func set_tag(tag_name:String, value:Variant = null) -> void:
+	_tags.set(_normalize_tag_name(tag_name), value)
 
+## Erases tag named [param tag_name],
+## returning weather or not that tag was defined in the first place.
+func erase_tag(tag_name:String) -> bool:
+	return _tags.erase(_normalize_tag_name(tag_name))
+
+## Returns weather or not a tag has been defined in this instance.
+func has_tag(tag_name:String) -> bool:
+	return _normalize_tag_name(tag_name) in _tags
+
+## Gets all defined tags for this instance.
+func get_defined_tags() -> Array[String]:
+	return Array(_tags.keys(), TYPE_STRING, "", null)
+
+func _get(property: StringName) -> Variant:
+	return get_tag(property, null)
+
+func _set(property: StringName, value: Variant) -> bool:
+	if has_tag(property):
+		set_tag(property, value)
+		return true
+	return false
+
+func _get_property_list() -> Array[Dictionary]:
+	var ret:Array[Dictionary] = []
+	if _property_name_cache.is_empty() and get_script() != null:
+		var names:Array = get_script().get_script_property_list().map(func(p:Dictionary): return p.name)
+		_property_name_cache = PackedStringArray(names)
+	var tags := get_defined_tags()
+	for tag in tags.filter(func (p:String): return p not in _property_name_cache):
+		var current_val := get_tag(tag)
+		ret.append({
+			"name":"other_tags/" + tag,
+			"type":typeof(current_val),
+			"class_name":("" if typeof(current_val) != TYPE_OBJECT else current_val.get_class()),
+			"usage":PROPERTY_USAGE_READ_ONLY,
+		})
 	return ret
 
-# ## This method is intended to be private.
-# ## Gets a [String] from a USC formatted [Array] of bytes.
-# ## Assumes that the given [param bytes] are USC formatted (does not check).
-func _get_string_from_ucs2(bytes: Array, null_to_newline:bool = false) -> String:
-	var s:String = ""
-	var idx:int = 0
-	while idx < (bytes.size() - 1):
-		var c = bytes[idx] + 256 * bytes[idx + 1]
-		if null_to_newline and c == 0:
-			c = preferred_newline
-		c = char(c)
-		s += c
-		idx += 2
-	return s
+func _validate_property(property: Dictionary) -> void:
+	match (property.name):
+		"_tags":
+			property.usage &= ~PROPERTY_USAGE_EDITOR
+		"tags":
+			property.usage |= PROPERTY_USAGE_READ_ONLY
 
-# ## This method is intended to be private.
-# ## Replaces a instance of byte '[param this]' with the byte '[param with]' in the byte array.
-# ## Instead of modifying the original [param byte_array], this returns a modified copy.
-func _byte_array_replace(byte_array:PackedByteArray, this:int, with:int) -> PackedByteArray:
-	byte_array = byte_array.duplicate()
-	while byte_array.has(this):
-		var ind = byte_array.find(this)
-		byte_array[ind] = with
-	return byte_array
+## Retrieves the most relevant artist, returning [member artist] when its not empty,
+## or falling back to [member album_artist] otherwise.
+func get_most_relevent_artist() -> String:
+	if not artist.is_empty():
+		return artist
+	return album_artist
 
-# ## This method is intended to be private.
-# ## Converts a given [Array] of [param bytes] into a [int],
-# ## also accounting for a syncsafe formatted int when [param is_syncsafe] is set.
-func _bytes_to_int(bytes: Array, is_syncsafe = true) -> int:
-	# Syncsafe uses 0x80 multiplier otherwise use 0x100 multiplier
-	var mult:int = 0x80 if is_syncsafe else 0x100
-	var n:int = 0
-	for byte in bytes:
-		n *= mult
-		n += byte
-	return n
+## Retrieves the most relevant cover art, returning [member cover] when its not null,
+## or falling back to [member album_cover] otherwise.
+func get_most_relevent_cover() -> ImageTexture:
+	if cover != null:
+		return cover
+	return album_cover
+
+## This static method handles unwrapping common types of meta-[AudioStreams],
+## creating an instance of [MusicMetadata] for any stream that would
+## originally contain supported audio file data,
+## recursing through potentially nested meta-[AudioStreams].
+## For more information on what is consitered an meta-[AudioStreams]
+## and how these are unpacked, see [member MusicMetadataTools.flatten_meta_streams].
+static func from_audio_stream_unpacked(stream:AudioStream) -> Array[MusicMetadata]:
+	return MusicMetadataTools.flatten_meta_streams(stream).map(MusicMetadata.new)
+
+## Create a [MusicMetadata] [Resource].
+## If not [code]null[/code], [param source] will update the new [MusicMetadata] [Resource]
+## with any appropriate data found. This data could be a form of integer array, interprited as
+## a representation of the original bytes of a audio file,
+## a [AudioStream] instance, imported from the audio file that metadata
+## should be attempted to be retrieved from,
+## or a [Dictionary] or another [MusicMetadata] instance,
+## which will have it contents merged into the [member tags] stored in this class.
+func _init(source:Variant = null):
+	if source == null:
+		return
+	match (typeof(source)):
+		TYPE_OBJECT:
+			if source is AudioStream:
+				update_from_stream(source)
+			elif source is MusicMetadata:
+				update_from_meta(source)
+			else:
+				assert(false, "Bad Object Type")
+		TYPE_ARRAY, TYPE_PACKED_BYTE_ARRAY, TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_INT64_ARRAY:
+			update_from_bytes(PackedByteArray(source))
+		TYPE_DICTIONARY:
+			update_from_dict(source)
+
+## Updates this object to include tags from the provided [AudioStream] [param stream].
+## This included properties relates to the bpm and beat counts, as set when importing, as well
+## as the potential [code]tags[/code] property that may occur in certain subclasses
+## of [AudioStream] (such as [AudioStreamWAV]).
+## This will abort when it first encounters an error when parsing returning that error,
+## otherwise returning OK.
+## Note that due to many factors resulting in the importing process of certain audio formats,
+## as well as the many formats of embedding metadata in music files, ther may likely be
+## situations where this method may return nothing.
+## Also not that, when at all possible, this method will attempt to also
+## use [member update_from_bytes] when a section or the entirely of the
+## original file's data could be found via the resource it was imported as.
+func update_from_stream(stream:AudioStream) -> int:
+	var err:int = OK
+
+	var bytes := MusicMetadataTools.bytes_from_audio(stream)
+	if not bytes.is_empty():
+		err = update_from_bytes(bytes)
+		if err != OK:
+			return err
+
+	var update := {}
+	err = MusicMetadataTools.parse_godot_properties(stream, update)
+	if err != OK:
+		return err
+
+	return update_from_dict(update)
+
+## Updates this object to include tags from the provided [MusicMetadata] [param meta].
+## THis will not modify or erase any tags not already defined in the provided [param meta].
+## This will abort when it first encounters an error when parsing returning that error,
+## otherwise returning OK.
+func update_from_meta(meta:MusicMetadata) -> int:
+	return update_from_dict(meta.tags)
+
+## Updates this object to include tags from the [PackedByteArray] data [param bytes]
+## expecting that these bytes are a large enough section of an audio file that
+## to allow for the parsing of any available metadata content.
+## This will abort when it first encounters an error when parsing returning that error,
+## otherwise returning OK.
+func update_from_bytes(bytes:PackedByteArray) -> int:
+	var err:int = OK
+
+	var update := {}
+	err = MusicMetadataTools.parse_id3_tags(bytes, update, PackedByteArray(), true)
+	if err != OK:
+		return err
+
+	return update_from_dict(update)
+
+## Updates this object to include tags from the provided [Dictionary] [param dict].
+## This will not modify or erase any tags not already defined in the provided [param dict].
+## This will abort when it first encounters an error when parsing returning that error,
+## otherwise returning OK.
+func update_from_dict(dict:Dictionary) -> int:
+	for tag in dict.keys():
+		set_tag(tag, dict[tag])
+	return OK
+
+## This updates the [code]tags[/code] member provided [AudioStream] [param stream]
+## to the same values defined in this instances's [member tags].
+## If [param stream]s does not provide a [code]tags[/code] property,
+## this will silently be skipped.
+## This will not remove tags already defined in the [param stream]'s [code]tags[/code]
+## that are not defined in this instance.
+## When [param include_timings] is set, the [member AudioStream.bar_beats],
+## [member AudioStream.beat_count], and [member AudioStream.bpm]
+## properties of the [param stream] will be set to a tag of the same name in this instance,
+## provided that a tag of that name is defined. Note that this does not exclude that tag
+## from also being stored in the updated [code]tags[/code]
+func save_into_stream_meta(stream:AudioStream, include_timings := false) -> int:
+	if include_timings:
+		for prop in ["bar_beats", "beat_count", "bpm"]:
+			if prop in tags:
+				stream.set(prop, get_tag(prop))
+
+	if "tags" in stream:
+		stream.tags.merge(tags, true)
+
+	return OK
+
+## Prints some of the metadata info to the output.
+## This will not include all tags, only a specifically defined few.
+func print_common_info() -> void:
+	print("title: ", title)
+	print("artist: ", artist)
+	print("album: ", album)
+	print("genre: ", genre)
+	print("bpm: ", bpm)
+	print("year: ", year)
