@@ -11,7 +11,6 @@ config_version=5
 [application]
 
 config/name="MusicMetadata"
-config/version="2.0"
 config/description="An extension that allows the for the extraction, storage, and display of audio file metadata.
 Currently supports all metadata already extracted by Godot for .wav and .ogg format files,
 certain properties for audio streams that can be defined when importing a audio file,
@@ -19,6 +18,7 @@ and adds ID3 metadata extraction for .mp3 format files.
 The user may also use this as a means to store manually defined metadata about music tracks,
 as the data contained is not automatically linked to any changes made after the parsing of a file.
 This includes a UI display for metadata, which can be used as an example, or as is."
+config/version="v3.0.0.0"
 run/main_scene="uid://c2s0ruvq6381u"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 boot_splash/image="uid://dy3fpbyamee1x"
