@@ -9,7 +9,10 @@ const PLUGIN_ICON := preload("res://addons/MusicMetadata/icon.svg")
 const ENSURE_SCRIPT_DOCS:Array[Script] = [
 	preload("res://addons/MusicMetadata/MusicMetadata.gd"),
 	preload("res://addons/MusicMetadata/MusicMetadataTools.gd"),
+	preload("res://addons/MusicMetadata/MusicMetadataImporter.gd"),
 ]
+
+var _importer:ResourceImporterMusicMetadata = null
 
 # Every once ands a while the script docs simply refuse to update properly.
 # This nudges the docs into a ensuring that the important scripts added by
@@ -41,6 +44,11 @@ func _get_plugin_icon() -> Texture2D:
 	return PLUGIN_ICON
 
 func _init_plugin() -> void:
-	pass #TODO
+	if _importer == null:
+		_importer = ResourceImporterMusicMetadata.new()
+		add_import_plugin(_importer)
+
 func _deinit_plugin() -> void:
-	pass #TODO
+	if _importer != null:
+		remove_import_plugin(_importer)
+		_importer = null
