@@ -9,13 +9,14 @@ extends Control
 	set(_value):
 		set_metadata(_value)
 
-## A reference to the [TextureRect] used to display the [member MusicMetadata.cover].
+## A reference to the [TextureRect] used to display the result of
+## [method MusicMetadata.get_most_relevent_cover].
 @export var art_display:TextureRect = null
 ## A reference to the [Label] used to display the [member MusicMetadata.title].
 @export var title_display:Label = null
-## A reference to the [Label] used to display the
-## [member MusicMetadata.artist] and the [member MusicMetadata.album_artist].
-@export var artist_band_display:Label = null
+## A reference to the [Label] used to display the result of
+## [method MusicMetadata.get_most_relevent_artist].
+@export var artist_display:Label = null
 ## A reference to the [Label] used to display the [member MusicMetadata.album].
 @export var album_display:Label = null
 ## A reference to the [Label] used to display the [member MusicMetadata.comments].
@@ -26,10 +27,10 @@ extends Control
 ## Used to format the contents of the [member album_display].
 ## It's a string only formatted with one value, [member MusicMetadata.album].
 @export var album_format:String = "From %s"
-## Used to format the contents of the [member artist_band_display].
+## Used to format the contents of the [member artist_display].
 ## It's a string formatted with two values,
 ## [member MusicMetadata.artist] and [member MusicMetadata.album_artist].
-@export var artist_band_format:String = "By %s / %s"
+@export var artist_format:String = "By %s"
 ## Used to format the contents of the [member description_display].
 ## It's a string only formatted with one value, [member MusicMetadata.comments].
 @export var description_format:String = "%s"
@@ -43,27 +44,19 @@ extends Control
 # ## A backing variable for [metadata].
 var _metadata = null
 
-func _enter_tree():
+func _enter_tree() -> void:
 	_hook_property_changed()
 	update_ui()
 
-func _ready():
+func _ready() -> void:
 	_hook_property_changed()
 	update_ui()
 
-func _exit_tree():
+func _exit_tree() -> void:
 	_unhook_property_changed()
 
-## Used to set the displayed [member metadata] from the given [param data].
-func set_metadata_from_data(data:PackedByteArray):
-	metadata = metadata.new(data)
-
-## Used to set the displayed [member metadata] from the given [param stream].
-func set_metadata_from_stream(stream:AudioStream):
-	metadata = metadata.new(stream)
-
 ## Sets the displayed [member metadata] from the given [param metadata].
-func set_metadata(metadata:MusicMetadata):
+func set_metadata(metadata:MusicMetadata) -> void:
 	_unhook_property_changed()
 	_metadata = metadata
 	_hook_property_changed()
@@ -75,11 +68,11 @@ func get_metadata() -> MusicMetadata:
 
 ## Updates the UI status form the current state of [member metadata].
 ## Used internally when [member metadata] is changed or modified.
-func update_ui():
+func update_ui() -> void:
 	if art_display != null:
-		if metadata != null and metadata.cover != null:
+		if metadata != null and metadata.get_most_relevent_cover() != null:
 			art_display.visible = true
-			art_display.texture = metadata.cover
+			art_display.texture = metadata.get_most_relevent_cover()
 		else:
 			art_display.visible = false
 
@@ -90,12 +83,12 @@ func update_ui():
 		else:
 			title_display.visible = false
 
-	if artist_band_display != null:
-		if metadata != null and (metadata.artist != "" or metadata.album_artist != ""):
-			artist_band_display.visible = true
-			artist_band_display.text = artist_band_format % [metadata.artist, metadata.album_artist]
+	if artist_display != null:
+		if metadata != null and metadata.get_most_relevent_artist() != "":
+			artist_display.visible = true
+			artist_display.text = artist_format % [metadata.get_most_relevent_artist()]
 		else:
-			artist_band_display.visible = false
+			artist_display.visible = false
 
 	if album_display != null:
 		if metadata != null and metadata.album != "":
@@ -122,12 +115,12 @@ func update_ui():
 
 # ## This method is intended to be private.
 # ## Used to hook [method update_ui] to [member metadata]'s [signal MusicMetadata.changed] signal.
-func _hook_property_changed():
+func _hook_property_changed() -> void:
 	if metadata != null and not metadata.changed.is_connected(update_ui):
 		metadata.changed.connect(update_ui)
 
 # ## This method is intended to be private.
 # ## Used to unhook [method update_ui] to [member metadata]'s [signal MusicMetadata.changed] signal.
-func _unhook_property_changed():
+func _unhook_property_changed() -> void:
 	if metadata != null and metadata.changed.is_connected(update_ui):
 		metadata.changed.disconnect(update_ui)

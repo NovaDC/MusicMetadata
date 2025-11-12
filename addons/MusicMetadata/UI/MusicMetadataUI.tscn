@@ -96,7 +96,7 @@ _data = {
 &"Slide from top": SubResource("Animation_vxls3")
 }
 
-[node name="MusicMetadataUI" type="Control" node_paths=PackedStringArray("art_display", "title_display", "artist_band_display", "album_display", "description_display", "url_display")]
+[node name="MusicMetadataUI" type="Control" node_paths=PackedStringArray("art_display", "title_display", "artist_display", "album_display", "description_display", "url_display")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -105,86 +105,110 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_3cvch")
 metadata = SubResource("Resource_j04hj")
-art_display = NodePath("HBoxContainer/HBoxContainer/Art")
-title_display = NodePath("HBoxContainer/HBoxContainer/VBoxContainer/Title")
-artist_band_display = NodePath("HBoxContainer/HBoxContainer/VBoxContainer/Artist Band")
-album_display = NodePath("HBoxContainer/HBoxContainer/VBoxContainer/Album")
-description_display = NodePath("HBoxContainer/Desc")
-url_display = NodePath("HBoxContainer/URL")
+art_display = NodePath("_HBC/_VBC/Art")
+title_display = NodePath("_HBC/_VBC/_HBC/Title")
+artist_display = NodePath("_HBC/_VBC/_HBC/Artist")
+album_display = NodePath("_HBC/_VBC/_HBC/Album")
+description_display = NodePath("_HBC/Desc")
+url_display = NodePath("_HBC/URL")
 
-[node name="HBoxContainer" type="VBoxContainer" parent="."]
+[node name="_HBC" type="VBoxContainer" parent="."]
 clip_contents = true
 layout_mode = 0
 offset_right = 386.0
-offset_bottom = 200.0
+offset_bottom = 364.0
 size_flags_horizontal = 0
 size_flags_vertical = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer"]
+[node name="_VBC" type="HBoxContainer" parent="_HBC"]
 layout_mode = 2
 
-[node name="Art" type="TextureRect" parent="HBoxContainer/HBoxContainer"]
+[node name="Art" type="TextureRect" parent="_HBC/_VBC"]
 visible = false
 custom_minimum_size = Vector2(200, 200)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
+focus_neighbor_left = NodePath("../_HBC/Title")
+focus_neighbor_top = NodePath("../../URL")
+focus_neighbor_right = NodePath("../_HBC/Title")
+focus_neighbor_bottom = NodePath("../../Desc")
+focus_next = NodePath("../_HBC/Title")
+focus_previous = NodePath("../../URL")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/HBoxContainer"]
+[node name="_HBC" type="VBoxContainer" parent="_HBC/_VBC"]
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="Title" type="Label" parent="HBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="Title" type="Label" parent="_HBC/_VBC/_HBC"]
 visible = false
 layout_mode = 2
 size_flags_vertical = 3
-text = "Paradox
-"
+focus_neighbor_left = NodePath("../../Art")
+focus_neighbor_top = NodePath("../../../URL")
+focus_neighbor_right = NodePath("../../Art")
+focus_neighbor_bottom = NodePath("../Album")
+focus_next = NodePath("../Album")
+focus_previous = NodePath("../../Art")
 label_settings = ExtResource("3_fmmta")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Album" type="Label" parent="HBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="Album" type="Label" parent="_HBC/_VBC/_HBC"]
 visible = false
 layout_mode = 2
 size_flags_vertical = 1
-text = "From Gimmick!
-"
+focus_neighbor_left = NodePath("../../Art")
+focus_neighbor_top = NodePath("../Title")
+focus_neighbor_right = NodePath("../../Art")
+focus_neighbor_bottom = NodePath("../Artist")
+focus_next = NodePath("../Artist")
+focus_previous = NodePath("../Title")
 label_settings = ExtResource("4_k3lid")
 horizontal_alignment = 1
 
-[node name="Artist Band" type="Label" parent="HBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="Artist" type="Label" parent="_HBC/_VBC/_HBC"]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-text = "By Masashi Kageyama
- / Masashi Kageyama
-"
+focus_neighbor_left = NodePath("../../Art")
+focus_neighbor_top = NodePath("../Album")
+focus_neighbor_right = NodePath("../../Art")
+focus_neighbor_bottom = NodePath("../../../Desc")
+focus_next = NodePath("../../../Desc")
+focus_previous = NodePath("../Album")
 label_settings = ExtResource("5_h6hbs")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Desc" type="Label" parent="HBoxContainer"]
+[node name="Desc" type="Label" parent="_HBC"]
 visible = false
 layout_mode = 2
-text = "Desc
-Desc
-Desc"
+focus_neighbor_left = NodePath(".")
+focus_neighbor_top = NodePath("../_VBC/Art")
+focus_neighbor_right = NodePath(".")
+focus_neighbor_bottom = NodePath("../URL")
+focus_next = NodePath("../URL")
+focus_previous = NodePath("../_VBC/_HBC/Artist")
 label_settings = ExtResource("4_k3lid")
 
-[node name="URL" type="Label" parent="HBoxContainer"]
+[node name="URL" type="Label" parent="_HBC"]
 visible = false
 layout_mode = 2
-text = "URLs
-"
+focus_neighbor_left = NodePath(".")
+focus_neighbor_top = NodePath("../Desc")
+focus_neighbor_right = NodePath(".")
+focus_neighbor_bottom = NodePath("../_VBC/Art")
+focus_next = NodePath("../_VBC/Art")
+focus_previous = NodePath("../Desc")
 label_settings = ExtResource("4_k3lid")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-root_node = NodePath("../HBoxContainer")
+root_node = NodePath("../_HBC")
 libraries = {
 &"": SubResource("AnimationLibrary_4hnqu")
 }
