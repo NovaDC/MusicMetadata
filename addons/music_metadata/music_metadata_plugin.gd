@@ -1,15 +1,15 @@
 @tool
-@icon("res://addons/MusicMetadata/icon.svg")
+@icon("./icon.svg")
 extends EditorPlugin
 
-const PLUGIN_NAME := "MusicMetadata"
+const PLUGIN_NAME := "music_metadata"
 
-const PLUGIN_ICON := preload("res://addons/MusicMetadata/icon.svg")
+const PLUGIN_ICON := preload("./icon.svg")
 
 const ENSURE_SCRIPT_DOCS:Array[Script] = [
-	preload("res://addons/MusicMetadata/MusicMetadata.gd"),
-	preload("res://addons/MusicMetadata/MusicMetadataTools.gd"),
-	preload("res://addons/MusicMetadata/MusicMetadataImporter.gd"),
+	preload("./music_metadata.gd"),
+	preload("./music_metadata_tools.gd"),
+	preload("./music_metadata_importer.gd"),
 ]
 
 var _importer:ResourceImporterMusicMetadata = null

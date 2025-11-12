@@ -1,10 +1,10 @@
 [gd_scene load_steps=12 format=3 uid="uid://c2s0ruvq6381u"]
 
-[ext_resource type="Script" uid="uid://n084dudeirun" path="res://addons/MusicMetadata/UI/MusicMetadataUIBehave.gd" id="1_3cvch"]
-[ext_resource type="Script" uid="uid://d2g0a1vyshm86" path="res://addons/MusicMetadata/MusicMetadata.gd" id="2_4g128"]
-[ext_resource type="LabelSettings" uid="uid://wavkiduf4bmu" path="res://addons/MusicMetadata/UI/title_label.tres" id="3_fmmta"]
-[ext_resource type="LabelSettings" uid="uid://ckgi2q2caexup" path="res://addons/MusicMetadata/UI/desc_label.tres" id="4_k3lid"]
-[ext_resource type="LabelSettings" uid="uid://p2u2g0bat677" path="res://addons/MusicMetadata/UI/name_label.tres" id="5_h6hbs"]
+[ext_resource type="Script" uid="uid://n084dudeirun" path="res://addons/music_metadata/ui/music_metadata_ui_behave.gd" id="1_3cvch"]
+[ext_resource type="Script" uid="uid://d2g0a1vyshm86" path="res://addons/music_metadata/music_metadata.gd" id="2_4g128"]
+[ext_resource type="LabelSettings" uid="uid://wavkiduf4bmu" path="res://addons/music_metadata/ui/title_label.tres" id="3_fmmta"]
+[ext_resource type="LabelSettings" uid="uid://ckgi2q2caexup" path="res://addons/music_metadata/ui/desc_label.tres" id="4_k3lid"]
+[ext_resource type="LabelSettings" uid="uid://p2u2g0bat677" path="res://addons/music_metadata/ui/name_label.tres" id="5_h6hbs"]
 
 [sub_resource type="Resource" id="Resource_j04hj"]
 script = ExtResource("2_4g128")

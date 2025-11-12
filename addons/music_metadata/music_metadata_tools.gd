@@ -1,3 +1,4 @@
+@icon("./icon.svg")
 class_name MusicMetadataTools
 
 ## Maps the series of preset ID3 genre's to their readable genre name

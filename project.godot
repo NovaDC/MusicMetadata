@@ -12,12 +12,14 @@ config_version=5
 
 config/name="MusicMetadata"
 config/version="2.0"
+run/main_scene="uid://c2s0ruvq6381u"
 config/features=PackedStringArray("4.5", "GL Compatibility")
-config/icon="res://icon.svg"
+boot_splash/image="uid://dy3fpbyamee1x"
+config/icon="uid://b416nfjlfu1yh"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/MusicMeta/plugin.cfg", "res://addons/MusicMetadata/plugin.cfg")
+enabled=PackedStringArray("res://addons/music_metadata/plugin.cfg")
 
 [rendering]
 

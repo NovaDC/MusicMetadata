@@ -1,5 +1,5 @@
 @tool
-@icon("res://addons/MusicMeta/icon.svg")
+@icon("../icon.svg")
 extends Control
 
 ## The current [MusicMetadata] object being displayed at this time.

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b416nfjlfu1yh"
-path="res://.godot/imported/icon.svg-b013eaa8d387157e60bd70c587a978b6.ctex"
+path="res://.godot/imported/icon.svg-04ef61e01acc930069b07628e1f90115.ctex"
 metadata={
 "has_editor_variant": true,
 "vram_texture": false
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://addons/MusicMetadata/icon.svg"
-dest_files=["res://.godot/imported/icon.svg-b013eaa8d387157e60bd70c587a978b6.ctex"]
+source_file="res://addons/music_metadata/icon.svg"
+dest_files=["res://.godot/imported/icon.svg-04ef61e01acc930069b07628e1f90115.ctex"]
 
 [params]
 
